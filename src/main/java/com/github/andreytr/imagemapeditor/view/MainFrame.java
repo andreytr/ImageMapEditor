@@ -6,13 +6,14 @@ import com.github.andreytr.imagemapeditor.wiki.ConfluenceMapEngine;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLDecoder;
 
 /**
  * User: andreytr
@@ -152,7 +153,12 @@ public class MainFrame extends JFrame {
             }
             
             try {
-                openImage(ImageIO.read(selectedFile), pageName, selectedFile.getName());
+                BufferedImage image = ImageIO.read(selectedFile);
+                if (image == null) {
+                    JOptionPane.showMessageDialog(this, "Error: Could not load image");
+                    return;
+                }
+                openImage(image, pageName, selectedFile.getName());
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
                 e.printStackTrace();
@@ -165,25 +171,43 @@ public class MainFrame extends JFrame {
         if (url == null || url.trim().equals("")) {
             return;
         }
-        String imageName = url.lastIndexOf("/") > -1 ? url.substring(url.lastIndexOf("/") + 1) : "";
+
+        String imageName = getImageNameForUrl(url);
         String pageName = getPageName();
-        if (pageName == null) {
+        if (imageName == null || pageName == null) {
             return;
         }
         try {
-            openImage(ImageIO.read(new URL(url)), pageName, imageName);
+            BufferedImage image = ImageIO.read(new URL(url));
+            if (image == null) {
+                JOptionPane.showMessageDialog(this, "Error: Could not load image");
+                return;
+            }
+            openImage(image, pageName, imageName);
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    public String getPageName() {
+    private String getPageName() {
         String s = JOptionPane.showInputDialog(this.getRootPane(), "Enter page name");
         if (s != null && s.trim().equals("")) {
             JOptionPane.showMessageDialog(this.getRootPane(), "Page name must be not empty!", "Warning", JOptionPane.WARNING_MESSAGE);
             return null;
         }
         return s;
+    }
+
+    private String getImageNameForUrl(String url) {
+        String urlWithoutParams = url.lastIndexOf("?") > -1 ? url.substring(0, url.lastIndexOf("?")) : url;
+
+        String imageName = urlWithoutParams.lastIndexOf("/") > -1 ? urlWithoutParams.substring(urlWithoutParams.lastIndexOf("/") + 1) : "";
+        try {
+            return URLDecoder.decode(imageName, "utf-8");
+        } catch (UnsupportedEncodingException e) {
+            JOptionPane.showMessageDialog(this.getRootPane(), e.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);
+        }
+        return null;
     }
 }
